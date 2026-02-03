@@ -5,6 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ReportController;
+use App\Models\Attendance; 
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 
 Route::get('/', function () {
     return view('welcome');
@@ -50,7 +53,15 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 Route::middleware(['auth', 'role:guru'])->prefix('guru')->name('guru.')->group(function () {
     // 1. Dashboard (Absensi K1)
     Route::get('/dashboard', function () {
-        return view('guru.dashboard');
+        $today = Carbon::today();
+        $attendance = Attendance::where('user_id', Auth::id())
+            ->where('date', $today)
+            ->first();
+
+        // Ambil koordinat sekolah dari setting
+        $settings = App\Models\AppSetting::getSettings();
+
+        return view('guru.dashboard', compact('attendance', 'settings'));
     })->name('dashboard');
 
     // 2. Input Kegiatan K2-K20
