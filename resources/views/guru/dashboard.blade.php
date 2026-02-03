@@ -17,12 +17,19 @@
         </div>
 
         <div class="mt-4">
-            <div id="location-status" class="mb-4 p-3 rounded-lg text-sm bg-yellow-50 text-yellow-700 flex items-center hidden">
-                <svg class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                </svg>
-                <span id="status-text">Mencari Lokasi Anda...</span>
+            <div id="location-status" class="mb-4 p-3 rounded-lg text-sm bg-yellow-50 text-yellow-700 flex items-center justify-between hidden">
+                <div class="flex items-center">
+                    <svg class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    <span id="status-text">Mencari Lokasi Anda...</span>
+                </div>
+                <button type="button" onclick="requestLocation()" class="ml-2 text-xs bg-yellow-200 hover:bg-yellow-300 text-yellow-800 px-3 py-1 rounded font-bold transition-colors shadow-sm">
+                    🔄 Coba Lagi
+                </button>
             </div>
+
+            <div id="debug-msg" class="hidden mb-4 p-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded font-mono"></div>
 
             @if(!$attendance)
             <form action="{{ route('guru.attendance.in') }}" method="POST">
@@ -31,7 +38,7 @@
                 <input type="hidden" name="longitude" id="long_in">
 
                 <button type="submit" id="btn-submit" disabled
-                    class="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg bg-gray-400 cursor-not-allowed transition-colors">
+                    class="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg bg-gray-400 cursor-not-allowed transition-colors duration-200">
                     📍 Menunggu GPS...
                 </button>
             </form>
@@ -47,7 +54,7 @@
                 </div>
 
                 <button type="submit" id="btn-submit" disabled
-                    class="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg bg-gray-400 cursor-not-allowed transition-colors">
+                    class="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg bg-gray-400 cursor-not-allowed transition-colors duration-200">
                     📍 Menunggu GPS...
                 </button>
             </form>
@@ -85,170 +92,201 @@
 
 @push('scripts')
 <script>
-    // 1. JAM DIGITAL (Langsung dijalankan)
+    // 1. JAM DIGITAL
     function updateClock() {
         const now = new Date();
         const timeString = now.toLocaleTimeString('id-ID', {
             hour12: false
         });
         const clockElement = document.getElementById('digital-clock');
-        if (clockElement) {
-            clockElement.innerText = timeString;
-        }
+        if (clockElement) clockElement.innerText = timeString;
     }
-    // Update setiap detik
     setInterval(updateClock, 1000);
-    // Panggil sekali di awal agar tidak menunggu 1 detik
     updateClock();
 
     // 2. LOGIC PETA & GPS
     document.addEventListener("DOMContentLoaded", function() {
-        console.log("DOM Loaded, initializing map..."); // Debugging di Console
 
-        // Data dari Controller
-        const schoolLat = {
-            {
-                $settings -> school_latitude
+        // --- BAGIAN INI SANGAT PENTING (JANGAN DI UBAH FORMATNYA) ---
+        // Kita gunakan try-catch untuk menangkap error jika data PHP kosong
+        let schoolLat, schoolLng, radiusMeters;
+        try {
+            schoolLat = {
+                {
+                    $settings -> school_latitude
+                }
+            };
+            schoolLng = {
+                {
+                    $settings -> school_longitude
+                }
+            };
+            radiusMeters = {
+                {
+                    $settings -> radius_meters
+                }
+            };
+        } catch (e) {
+            console.error("Gagal membaca koordinat dari Database:", e);
+            document.getElementById('debug-msg').classList.remove('hidden');
+            document.getElementById('debug-msg').innerText = "Error: Data Koordinat Sekolah KOSONG/Error. Silakan hubungi Admin.";
+            return; // Stop script
+        }
+        // ------------------------------------------------------------
+
+        // Init Map
+        var map = L.map('map').setView([schoolLat, schoolLng], 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Marker Sekolah
+        var schoolIcon = L.icon({
+            iconUrl: 'https://cdn-icons-png.flaticon.com/512/167/167707.png',
+            iconSize: [32, 32],
+            iconAnchor: [16, 32]
+        });
+        L.marker([schoolLat, schoolLng], {
+            icon: schoolIcon
+        }).addTo(map).bindPopup("Lokasi Sekolah").openPopup();
+
+        // Lingkaran Radius
+        L.circle([schoolLat, schoolLng], {
+            color: 'green',
+            fillColor: '#4ade80',
+            fillOpacity: 0.2,
+            radius: radiusMeters
+        }).addTo(map);
+
+        var userMarker = L.marker([0, 0]).addTo(map);
+
+        // UI Elements
+        const btnSubmit = document.getElementById('btn-submit');
+        const locStatus = document.getElementById('location-status');
+        const statusText = document.getElementById('status-text');
+        const inputLat = document.getElementById('lat_in');
+        const inputLong = document.getElementById('long_in');
+        const distanceDisplay = document.getElementById('distance-display');
+        const radiusIndicator = document.getElementById('radius-indicator');
+        const debugMsg = document.getElementById('debug-msg');
+
+        // Rumus Jarak (Haversine)
+        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
+            var R = 6371;
+            var dLat = deg2rad(lat2 - lat1);
+            var dLon = deg2rad(lon2 - lon1);
+            var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return (R * c) * 1000; // Return Meter
+        }
+
+        function deg2rad(deg) {
+            return deg * (Math.PI / 180);
+        }
+
+        // Fungsi Request Lokasi (Global agar bisa dipanggil tombol onclick)
+        window.requestLocation = function() {
+            if (!navigator.geolocation) {
+                alert("Browser tidak mendukung GPS.");
+                return;
             }
-        };
-        const schoolLng = {
-            {
-                $settings -> school_longitude
-            }
-        };
-        const radiusMeters = {
-            {
-                $settings -> radius_meters
-            }
-        };
 
-        // Pastikan elemen map ada sebelum inisialisasi
-        if (document.getElementById('map')) {
-            var map = L.map('map').setView([schoolLat, schoolLng], 16);
+            // Tampilkan status loading
+            locStatus.classList.remove('hidden');
+            if (statusText) statusText.innerText = "Sedang meminta izin lokasi...";
+            if (debugMsg) debugMsg.classList.add('hidden');
 
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap'
-            }).addTo(map);
+            navigator.geolocation.getCurrentPosition(
+                // SUKSES
+                function(position) {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
 
-            // Marker Sekolah
-            var schoolIcon = L.icon({
-                iconUrl: 'https://cdn-icons-png.flaticon.com/512/167/167707.png',
-                iconSize: [32, 32],
-                iconAnchor: [16, 32]
-            });
+                    // Update Form & Map
+                    if (inputLat) inputLat.value = userLat;
+                    if (inputLong) inputLong.value = userLng;
 
-            L.marker([schoolLat, schoolLng], {
-                icon: schoolIcon
-            }).addTo(map).bindPopup("Lokasi Sekolah").openPopup();
-
-            // Lingkaran Radius
-            L.circle([schoolLat, schoolLng], {
-                color: 'green',
-                fillColor: '#4ade80',
-                fillOpacity: 0.2,
-                radius: radiusMeters
-            }).addTo(map);
-
-            // Marker User (Awalnya kosong)
-            var userMarker = L.marker([0, 0]).addTo(map);
-            var firstLoad = true;
-
-            // Variables UI
-            const btnSubmit = document.getElementById('btn-submit');
-            const locStatus = document.getElementById('location-status');
-            const statusText = document.getElementById('status-text');
-            const inputLat = document.getElementById('lat_in');
-            const inputLong = document.getElementById('long_in');
-            const distanceDisplay = document.getElementById('distance-display');
-            const radiusIndicator = document.getElementById('radius-indicator');
-
-            // Rumus Haversine
-            function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-                var R = 6371;
-                var dLat = deg2rad(lat2 - lat1);
-                var dLon = deg2rad(lon2 - lon1);
-                var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-                var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-                return (R * c) * 1000; // Meter
-            }
-
-            function deg2rad(deg) {
-                return deg * (Math.PI / 180);
-            }
-
-            // GPS Success
-            function onLocationFound(position) {
-                const userLat = position.coords.latitude;
-                const userLng = position.coords.longitude;
-
-                // Isi Form Hidden
-                if (inputLat) inputLat.value = userLat;
-                if (inputLong) inputLong.value = userLng;
-
-                // Update Marker Peta
-                userMarker.setLatLng([userLat, userLng]);
-                if (firstLoad) {
+                    userMarker.setLatLng([userLat, userLng]);
                     map.setView([userLat, userLng], 17);
-                    firstLoad = false;
-                }
 
-                // Hitung Jarak
-                const distance = getDistanceFromLatLonInKm(userLat, userLng, schoolLat, schoolLng);
-                distanceDisplay.innerText = Math.round(distance) + " Meter";
+                    // Hitung Jarak
+                    const distance = getDistanceFromLatLonInKm(userLat, userLng, schoolLat, schoolLng);
+                    if (distanceDisplay) distanceDisplay.innerText = Math.round(distance) + " Meter";
 
-                // Cek Radius
-                if (distance <= radiusMeters) {
-                    // DALAM RADIUS
-                    if (btnSubmit) {
-                        btnSubmit.disabled = false;
-                        btnSubmit.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                        @if(!$attendance)
-                        btnSubmit.classList.add('bg-blue-600', 'hover:bg-blue-700');
-                        btnSubmit.innerHTML = "📍 CHECK IN SEKARANG";
-                        @else
-                        btnSubmit.classList.add('bg-red-600', 'hover:bg-red-700');
-                        btnSubmit.innerHTML = "📍 CHECK OUT SEKARANG";
-                        @endif
+                    // Cek Radius
+                    if (distance <= radiusMeters) {
+                        enableButton(true);
+                        updateStatus(true, distance);
+                    } else {
+                        enableButton(false, distance);
+                        updateStatus(false, distance);
                     }
-                    radiusIndicator.className = "px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200";
-                    radiusIndicator.innerHTML = "✅ Dalam Radius";
-                    locStatus.classList.add('hidden');
-                } else {
-                    // LUAR RADIUS
-                    if (btnSubmit) {
-                        btnSubmit.disabled = true;
-                        btnSubmit.classList.add('bg-gray-400', 'cursor-not-allowed');
-                        btnSubmit.classList.remove('bg-blue-600', 'hover:bg-blue-700', 'bg-red-600', 'hover:bg-red-700');
-                        btnSubmit.innerHTML = "❌ Terlalu Jauh (" + Math.round(distance) + "m)";
+                },
+                // ERROR
+                function(error) {
+                    console.error("Error GPS:", error);
+                    let msg = "Gagal deteksi lokasi.";
+
+                    // Diagnosa Error Lebih Jelas
+                    if (error.code === 1) msg = "IZIN DITOLAK: Harap klik icon gembok di browser & izinkan lokasi.";
+                    else if (error.code === 2) msg = "SINYAL HILANG: Pastikan GPS aktif di perangkat Anda.";
+                    else if (error.code === 3) msg = "TIMEOUT: Waktu permintaan habis.";
+
+                    // Tampilkan di layar agar user tahu
+                    if (debugMsg) {
+                        debugMsg.classList.remove('hidden');
+                        debugMsg.innerText = "Debug Error: " + msg;
                     }
-                    radiusIndicator.className = "px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200";
-                    radiusIndicator.innerHTML = "⛔ Diluar Jangkauan";
-
-                    locStatus.classList.remove('hidden');
-                    if (statusText) statusText.innerHTML = "Anda diluar jangkauan sekolah (" + Math.round(distance) + "m). Harap mendekat.";
+                    if (statusText) statusText.innerText = "Gagal. Coba lagi.";
+                },
+                // Setting GPS: enableHighAccuracy false agar lebih cepat (fallback ke WiFi/Cell)
+                {
+                    enableHighAccuracy: false,
+                    timeout: 15000,
+                    maximumAge: 0
                 }
-            }
+            );
+        };
 
-            // GPS Error
-            function onLocationError(e) {
-                console.error(e);
-                locStatus.classList.remove('hidden');
-                if (statusText) statusText.innerHTML = "⚠️ Gagal deteksi lokasi. Izinkan akses GPS browser.";
-            }
-
-            // Start GPS Watcher
-            if (navigator.geolocation) {
-                locStatus.classList.remove('hidden');
-                navigator.geolocation.watchPosition(onLocationFound, onLocationError, {
-                    enableHighAccuracy: true,
-                    maximumAge: 10000,
-                    timeout: 5000
-                });
+        // Fungsi Mengatur Tombol
+        function enableButton(isAllowed, distance = 0) {
+            if (!btnSubmit) return;
+            if (isAllowed) {
+                btnSubmit.disabled = false;
+                btnSubmit.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                @if(!$attendance)
+                btnSubmit.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                btnSubmit.innerHTML = "📍 CHECK IN SEKARANG";
+                @else
+                btnSubmit.classList.add('bg-red-600', 'hover:bg-red-700');
+                btnSubmit.innerHTML = "📍 CHECK OUT SEKARANG";
+                @endif
             } else {
-                alert("Browser Anda tidak support Geolocation");
+                btnSubmit.disabled = true;
+                btnSubmit.classList.add('bg-gray-400', 'cursor-not-allowed');
+                btnSubmit.classList.remove('bg-blue-600', 'bg-red-600', 'hover:bg-blue-700', 'hover:bg-red-700');
+                btnSubmit.innerHTML = "❌ Terlalu Jauh (" + Math.round(distance) + "m)";
             }
         }
+
+        // Fungsi Mengatur Label Status
+        function updateStatus(isAllowed, distance) {
+            if (!radiusIndicator) return;
+            if (isAllowed) {
+                radiusIndicator.className = "px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700 border border-green-200";
+                radiusIndicator.innerHTML = "✅ Dalam Jangkauan";
+                locStatus.classList.add('hidden');
+            } else {
+                radiusIndicator.className = "px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200";
+                radiusIndicator.innerHTML = "⛔ Luar Jangkauan";
+                locStatus.classList.remove('hidden');
+                if (statusText) statusText.innerHTML = "Anda diluar radius (" + Math.round(distance) + "m). Harap mendekat.";
+            }
+        }
+
+        // Jalankan Otomatis Saat Load
+        requestLocation();
     });
 </script>
 @endpush

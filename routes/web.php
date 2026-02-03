@@ -58,8 +58,17 @@ Route::middleware(['auth', 'role:guru'])->prefix('guru')->name('guru.')->group(f
             ->where('date', $today)
             ->first();
 
-        // Ambil koordinat sekolah dari setting
-        $settings = App\Models\AppSetting::getSettings();
+        // INI KUNCINYA: Mengambil data koordinat dari DB
+        // Pastikan Model AppSetting sudah dibuat di Tahap 2
+        $settings = App\Models\AppSetting::first();
+
+        // Jaga-jaga jika database kosong, kita buat data dummy di memory
+        if (!$settings) {
+            $settings = new App\Models\AppSetting();
+            $settings->school_latitude = -3.319363; // Contoh Lat
+            $settings->school_longitude = 114.589803; // Contoh Long
+            $settings->radius_meters = 100;
+        }
 
         return view('guru.dashboard', compact('attendance', 'settings'));
     })->name('dashboard');
