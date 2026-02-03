@@ -23,8 +23,8 @@ class DatabaseSeeder extends Seeder
 
         // 2. Setting Default Lokasi (Contoh Koordinat GIBS, nanti diedit di admin)
         AppSetting::create([
-            'school_latitude' => -3.319363,
-            'school_longitude' => 114.589803,
+            'school_latitude' =>  -3.229683,
+            'school_longitude' =>  114.598840,
             'radius_meters' => 100,
         ]);
 
