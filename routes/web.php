@@ -8,14 +8,13 @@ use App\Http\Controllers\ReportController;
 use App\Models\Attendance; 
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\AdminSettingsController;
+use App\Http\Controllers\AdminUserController;
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -29,24 +28,22 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         return view('admin.dashboard');
     })->name('dashboard');
 
+    // 2. Setting Lokasi & Aplikasi
+    Route::get('/settings', [AdminSettingsController::class, 'index'])->name('settings');
+    Route::post('/settings', [AdminSettingsController::class, 'update'])->name('settings.update');
+
     // 2. Laporan Kinerja
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
     Route::get('/reports/user/{id}', [ReportController::class, 'daily'])->name('reports.daily');
 
     // 3. Manajemen Guru (Placeholder sementara)
-    Route::get('/users', function () {
-        return "Halaman Manajemen Guru";
-    })->name('users.index');
+    Route::resource('users', AdminUserController::class);
 
     // 4. Master Kegiatan (Placeholder sementara)
     Route::get('/activities', function () {
         return "Halaman Master Kegiatan";
     })->name('activities.index');
 
-    // 5. Settings (Placeholder sementara)
-    Route::get('/settings', function () {
-        return "Halaman Setting Lokasi";
-    })->name('settings');
 });
 
 // ROUTE KHUSUS GURU
@@ -58,8 +55,6 @@ Route::middleware(['auth', 'role:guru'])->prefix('guru')->name('guru.')->group(f
             ->where('date', $today)
             ->first();
 
-        // INI KUNCINYA: Mengambil data koordinat dari DB
-        // Pastikan Model AppSetting sudah dibuat di Tahap 2
         $settings = App\Models\AppSetting::first();
 
         // Jaga-jaga jika database kosong, kita buat data dummy di memory
