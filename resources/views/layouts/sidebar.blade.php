@@ -68,7 +68,7 @@
                {{ request()->routeIs('admin.substitute') 
                   ? 'text-white bg-slate-800 shadow-md shadow-slate-900/10' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5' }}"
-                href="#">
+                href="{{ route('admin.substitutes.index') }}">
                 <svg class="w-5 h-5 transition-colors {{ request()->routeIs('admin.substitute') ? 'text-white' : 'text-slate-500 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
