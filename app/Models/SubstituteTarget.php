@@ -13,6 +13,7 @@ class SubstituteTarget extends Model
         'user_id',
         'month',
         'year',
+        'terlaksana_count', // Tambahkan ini
         'alpha_count'
     ];
 
