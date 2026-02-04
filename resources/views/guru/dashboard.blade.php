@@ -8,18 +8,26 @@
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="md:col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
             <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
-            
             <div class="relative z-10 flex items-start justify-between">
                 <div>
                     <p class="text-slate-400 text-sm font-medium mb-1">Selamat Datang,</p>
                     <h2 class="text-3xl font-bold tracking-tight">{{ Auth::user()->name }}</h2>
                     <p class="mt-2 text-slate-300 text-sm">
-                        Siap untuk mengajar dan mencerdaskan bangsa hari ini?
+                        @if($attendance)
+                            Status Hari Ini: 
+                            @if($attendance->status == 'ontime')
+                                <span class="bg-emerald-500/20 text-emerald-300 px-2 py-1 rounded font-bold">TEPAT WAKTU</span>
+                            @else
+                                <span class="bg-rose-500/20 text-rose-300 px-2 py-1 rounded font-bold">TERLAMBAT</span>
+                            @endif
+                        @else
+                            Belum melakukan presensi hari ini.
+                        @endif
                     </p>
                 </div>
                 <div class="hidden sm:block p-3 bg-white/10 rounded-xl backdrop-blur-sm">
                     <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                 </div>
             </div>
@@ -61,8 +69,8 @@
                 <h3 class="font-semibold text-slate-800 mb-4">Aksi Presensi</h3>
                 
                 <div class="space-y-3">
-                    {{-- Form Check In (Masuk) --}}
-                    {{-- PERBAIKAN: Route diarahkan ke guru.attendance.in --}}
+                    {{-- Form Check In --}}
+                    {{-- PERBAIKAN: Menggunakan route attendance.in --}}
                     <form action="{{ route('guru.attendance.in') }}" method="POST" id="form-checkin">
                         @csrf
                         <input type="hidden" name="latitude" id="lat-in">
@@ -80,8 +88,8 @@
                         </button>
                     </form>
 
-                    {{-- Form Check Out (Pulang) --}}
-                    {{-- PERBAIKAN: Route diarahkan ke guru.attendance.out --}}
+                    {{-- Form Check Out --}}
+                    {{-- PERBAIKAN: Menggunakan route attendance.out --}}
                     <form action="{{ route('guru.attendance.out') }}" method="POST" id="form-checkout">
                         @csrf
                         <input type="hidden" name="latitude" id="lat-out">
@@ -102,7 +110,7 @@
 
                 <div class="mt-4 pt-4 border-t border-slate-50">
                     <p class="text-xs text-center text-slate-400">
-                        Tombol akan aktif otomatis saat Anda berada dalam radius <span class="font-bold text-slate-600">{{ $setting->radius_meter ?? 160 }} meter</span> dari lokasi sekolah.
+                        Radius Sekolah: <span class="font-bold text-slate-600">{{ $setting->radius_meter ?? 160 }} meter</span>.
                     </p>
                 </div>
             </div>
@@ -113,12 +121,10 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <div>
-                        <h4 class="font-bold text-indigo-900 text-sm">Batas Check in 1 jam Sebelum Jam Masuk</h4>
-                        <h4 class="font-bold text-indigo-900 text-sm">Batas Check out 1 jam Setelah Jam Pulang</h4>
+                        <h4 class="font-bold text-indigo-900 text-sm">Informasi Jam Presensi</h4>
                         <ul class="mt-2 space-y-1 text-xs text-indigo-700">
-                            <li>• Masuk: 06:15 - 07:15 WITA</li>
-                            <li>• Pulang: 16:00 - 17:00 WITA</li>
-                            <li>• Pastikan GPS aktif di Perangkat Anda.</li>
+                            <li>• Batas Tepat Waktu: <b>06:15 WITA- 07:15 WITA</b></li>
+                            <li>• Absen Pulang: <b>16:00 WITA - 17:00 WITA</b></li>
                         </ul>
                     </div>
                 </div>
@@ -131,40 +137,31 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // --- STATUS ABSENSI DARI CONTROLLER ---
-        // Kita ambil data apakah user sudah absen atau belum dari variabel $attendance
         const hasCheckIn = {{ $attendance ? 'true' : 'false' }};
         const hasCheckOut = {{ ($attendance && $attendance->clock_out) ? 'true' : 'false' }};
+        
+        // Variabel global untuk jam saat ini (diambil dari jam HP)
+        let currentHour = new Date().getHours(); 
 
-        // --- 1. Digital Clock ---
         function updateClock() {
             const now = new Date();
+            currentHour = now.getHours(); // Update jam setiap detik
             const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('clock').innerText = timeString;
         }
         setInterval(updateClock, 1000);
         updateClock();
 
-        // --- 2. Map & Geolocation ---
+        // ... (Kode Map & Geolocation sama seperti sebelumnya) ...
         const officeLat = {{ $setting->latitude ?? -3.229683 }};
         const officeLng = {{ $setting->longitude ?? 114.598840 }};
         const maxRadius = {{ $setting->radius_meter ?? 160 }};
         
         const map = L.map('map').setView([officeLat, officeLng], 18);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap'
-        }).addTo(map);
-
-        const circle = L.circle([officeLat, officeLng], {
-            color: '#6366f1',
-            fillColor: '#818cf8',
-            fillOpacity: 0.2,
-            radius: maxRadius
-        }).addTo(map);
-
-        const schoolMarker = L.marker([officeLat, officeLng]).addTo(map)
-            .bindPopup("<b>GIBS School</b><br>Pusat Absensi").openPopup();
-
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+        L.circle([officeLat, officeLng], { color: '#6366f1', fillColor: '#818cf8', fillOpacity: 0.2, radius: maxRadius }).addTo(map);
+        L.marker([officeLat, officeLng]).addTo(map).bindPopup("<b>GIBS School</b><br>Pusat Absensi").openPopup();
+        
         let userMarker = null;
 
         const btnCheckIn = document.getElementById('btn-checkin');
@@ -186,32 +183,39 @@
                 statusBadge.className = "mt-4 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-600 flex items-center gap-2 border border-emerald-200";
                 statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Di Dalam Area`;
                 
-                // --- LOGIKA TOMBOL DIPERBARUI DISINI ---
+                // --- LOGIKA TOMBOL & JAM ---
                 
-                // 1. Cek Tombol Check In
+                // 1. Check In
                 if (!hasCheckIn) {
-                    // Belum Absen Masuk -> Enable Tombol
                     enableButton(btnCheckIn, 'bg-emerald-500', 'text-white', 'hover:bg-emerald-600');
                     textCheckIn.innerText = "ABSEN MASUK";
                 } else {
-                    // Sudah Absen Masuk -> Disable & Ganti Teks
                     disableButton(btnCheckIn);
                     textCheckIn.innerText = "SUDAH MASUK";
-                    btnCheckIn.classList.add('bg-emerald-100', 'text-emerald-700'); // Style khusus sudah absen
+                    btnCheckIn.classList.add('bg-emerald-100', 'text-emerald-700'); 
                     btnCheckIn.classList.remove('text-slate-400');
                 }
 
-                // 2. Cek Tombol Check Out
+                // 2. Check Out (Dengan Validasi Jam 16:00)
                 if (hasCheckIn && !hasCheckOut) {
-                    // Sudah Masuk TAPI Belum Pulang -> Enable Tombol
-                    enableButton(btnCheckOut, 'bg-rose-500', 'text-white', 'hover:bg-rose-600');
-                    textCheckOut.innerText = "ABSEN PULANG";
+                    
+                    if (currentHour >= 16) { 
+                        // Jika sudah jam 16:00 ke atas -> Buka Tombol
+                        enableButton(btnCheckOut, 'bg-rose-500', 'text-white', 'hover:bg-rose-600');
+                        textCheckOut.innerText = "ABSEN PULANG";
+                    } else {
+                        // Jika belum jam 16:00 -> Kunci Tombol & Beri Info
+                        disableButton(btnCheckOut);
+                        textCheckOut.innerText = "BELUM JAM PULANG (16:00)";
+                        // Tambah style kuning/warning biar user sadar
+                        btnCheckOut.classList.add('bg-amber-100', 'text-amber-700');
+                        btnCheckOut.classList.remove('text-slate-400');
+                    }
+
                 } else if (!hasCheckIn) {
-                    // Belum Masuk -> Disable Tombol Pulang
                     disableButton(btnCheckOut);
                     textCheckOut.innerText = "BELUM MASUK";
                 } else {
-                    // Sudah Pulang -> Disable
                     disableButton(btnCheckOut);
                     textCheckOut.innerText = "SUDAH PULANG";
                     btnCheckOut.classList.add('bg-rose-100', 'text-rose-700');
@@ -222,22 +226,21 @@
                 statusBadge.className = "mt-4 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-600 flex items-center gap-2 border border-rose-200";
                 statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Di Luar Area`;
                 
-                // Diluar Area -> Semua Disable
                 disableButton(btnCheckIn);
                 disableButton(btnCheckOut);
             }
         }
 
+        // ... (Sisa fungsi helper enableButton, disableButton, navigator.geolocation sama) ...
         function enableButton(btn, bgClass, textClass, hoverClass) {
             btn.disabled = false;
-            btn.classList.remove('bg-slate-100', 'text-slate-400', 'bg-emerald-100', 'text-emerald-700', 'bg-rose-100', 'text-rose-700'); // Reset style
+            btn.classList.remove('bg-slate-100', 'text-slate-400', 'bg-emerald-100', 'text-emerald-700', 'bg-rose-100', 'text-rose-700', 'bg-amber-100', 'text-amber-700'); 
             btn.classList.add(bgClass, textClass, hoverClass, 'shadow-lg', 'shadow-indigo-500/20');
             btn.type = 'submit'; 
         }
 
         function disableButton(btn) {
             btn.disabled = true;
-            // Kita reset class dasar, tapi style spesifik (seperti 'Sudah Masuk') diatur di logika updateStatus
             btn.className = "w-full group relative flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70";
             btn.type = 'button';
         }
@@ -271,17 +274,10 @@
                 },
                 (error) => {
                     console.error("Error Geolocation: ", error);
-                    statusBadge.innerText = "Gagal mendeteksi lokasi (Pastikan GPS Aktif)";
-                    statusBadge.classList.add('bg-red-100', 'text-red-600');
+                    statusBadge.innerText = "Gagal mendeteksi lokasi";
                 },
-                {
-                    enableHighAccuracy: true,
-                    maximumAge: 10000,
-                    timeout: 5000
-                }
+                { enableHighAccuracy: true }
             );
-        } else {
-            alert("Browser Anda tidak mendukung Geolocation.");
         }
     });
 </script>
