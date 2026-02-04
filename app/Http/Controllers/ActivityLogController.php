@@ -13,23 +13,18 @@ class ActivityLogController extends Controller
 {
     public function index(Request $request)
     {
-        // 1. Ambil Tanggal (Default Hari Ini)
         $date = $request->input('date', Carbon::today()->format('Y-m-d'));
 
-        // 2. Ambil Daftar Kegiatan (Kecuali K1/Absensi karena otomatis)
-        $activityTypes = ActivityType::where('is_active', true)
-            ->where('code', '!=', 'K1')
-            ->orderBy('code') // Urutkan K2, K3, dst
-            ->get();
+        // Cek jika ada permintaan edit
+        $editLog = null;
+        if ($request->has('edit_id')) {
+            $editLog = ActivityLog::where('user_id', Auth::id())->find($request->edit_id);
+        }
 
-        // 3. Ambil Log Kegiatan User pada Tanggal Tersebut
-        $logs = ActivityLog::with('activityType')
-            ->where('user_id', Auth::id())
-            ->whereDate('date', $date)
-            ->orderByDesc('created_at')
-            ->get();
+        $activityTypes = ActivityType::where('is_active', true)->where('code', '!=', 'K1')->get();
+        $logs = ActivityLog::with('activityType')->where('user_id', Auth::id())->whereDate('date', $date)->get();
 
-        return view('guru.activities.index', compact('activityTypes', 'logs', 'date'));
+        return view('guru.activities.index', compact('activityTypes', 'logs', 'date', 'editLog'));
     }
 
     public function store(Request $request)
@@ -98,18 +93,39 @@ class ActivityLogController extends Controller
 
     public function history(Request $request)
     {
+        // Mengambil filter dari request, atau default ke bulan/tahun saat ini
         $month = $request->input('month', Carbon::now()->month);
         $year = $request->input('year', Carbon::now()->year);
+        $search = $request->input('search');
 
-        // Ambil data kegiatan sesuai filter
-        $logs = ActivityLog::with('activityType')
+        $query = ActivityLog::with('activityType')
             ->where('user_id', Auth::id())
             ->whereMonth('date', $month)
-            ->whereYear('date', $year)
-            ->orderByDesc('date')
-            ->orderByDesc('time_recorded')
-            ->get();
+            ->whereYear('date', $year);
 
-        return view('guru.history.index', compact('logs', 'month', 'year'));
+        // Tambahkan pencarian jika ada input search
+        if ($search) {
+            $query->where(function ($q) use ($search) {
+                $q->where('description', 'like', "%{$search}%")
+                    ->orWhereHas('activityType', function ($typeQ) use ($search) {
+                        $typeQ->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        // Clone query untuk keperluan rekapitulasi statistik
+        $rekapQuery = clone $query;
+
+        // Gunakan paginate agar data yang banyak tidak menumpuk
+        $logs = $query->orderByDesc('date')->paginate(10)->withQueryString();
+
+        // Hitung rekapitulasi dari hasil query yang sudah difilter
+        $rekap = [
+            'total_kegiatan' => $query->count(),
+            'total_volume' => $query->sum('value'),
+            'dengan_bukti' => $query->whereNotNull('file_path')->count(),
+        ];
+
+        return view('guru.history.index', compact('logs', 'month', 'year', 'search', 'rekap'));
     }
 }
