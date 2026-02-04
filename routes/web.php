@@ -84,13 +84,17 @@ Route::middleware(['auth', 'role:guru'])->prefix('guru')->name('guru.')->group(f
     Route::post('/activities', [ActivityLogController::class, 'store'])->name('activities.store');
 
     // 3. Riwayat Saya (Placeholder sementara)
-    Route::get('/history', function () {
-        return "Halaman Riwayat";
-    })->name('history');
+    // 3. Riwayat Saya
+    Route::get('/history', [ActivityLogController::class, 'history'])->name('history');
 
     // Route Proses Absen K1
     Route::post('/attendance/in', [AttendanceController::class, 'store'])->name('attendance.in');
     Route::post('/attendance/out', [AttendanceController::class, 'update'])->name('attendance.out');
+
+    Route::get('/activities', [ActivityLogController::class, 'index'])->name('activities.index');
+    Route::post('/activities', [ActivityLogController::class, 'store'])->name('activities.store');
+    // Tambahkan ini:
+    Route::delete('/activities/{id}', [ActivityLogController::class, 'destroy'])->name('activities.destroy');
 
     Schedule::command('attendance:auto-checkout')->dailyAt('17:00');
 });
