@@ -8,6 +8,7 @@ use App\Http\Controllers\ReportController;
 use App\Models\Attendance;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schedule;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\ActivityTypeController;
@@ -90,6 +91,8 @@ Route::middleware(['auth', 'role:guru'])->prefix('guru')->name('guru.')->group(f
     // Route Proses Absen K1
     Route::post('/attendance/in', [AttendanceController::class, 'store'])->name('attendance.in');
     Route::post('/attendance/out', [AttendanceController::class, 'update'])->name('attendance.out');
+
+    Schedule::command('attendance:auto-checkout')->dailyAt('17:00');
 });
 
 require __DIR__ . '/auth.php';
