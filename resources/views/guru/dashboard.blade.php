@@ -1,228 +1,269 @@
 @extends('layouts.app')
 
-@section('header', 'Dashboard Absensi')
+@section('header', 'Beranda')
 
 @section('content')
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="max-w-7xl mx-auto space-y-6">
 
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 flex flex-col justify-between">
-        <div>
-            <h2 class="text-lg font-semibold text-slate-800">Halo, {{ Auth::user()->name }} 👋</h2>
-            <p class="text-slate-500 text-sm">Jangan lupa absensi tepat waktu ya!</p>
-        </div>
-
-        <div class="py-8 text-center">
-            <div class="text-6xl font-bold text-slate-800 tracking-tight" id="digital-clock">00:00:00</div>
-            <div class="text-slate-500 font-medium mt-2">{{ \Carbon\Carbon::now()->translatedFormat('l, d F Y') }}</div>
-        </div>
-
-        <div class="mt-4">
-            <div id="location-status" class="mb-4 p-3 rounded-lg text-sm bg-yellow-50 text-yellow-700 flex items-center justify-between hidden">
-                <div class="flex items-center">
-                    <svg class="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                    <span id="status-text">Mencari Lokasi Anda...</span>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="md:col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
+            
+            <div class="relative z-10 flex items-start justify-between">
+                <div>
+                    <p class="text-slate-400 text-sm font-medium mb-1">Selamat Datang,</p>
+                    <h2 class="text-3xl font-bold tracking-tight">{{ Auth::user()->name }}</h2>
+                    <p class="mt-2 text-slate-300 text-sm">
+                        Siap untuk mengajar dan mencerdaskan bangsa hari ini?
+                    </p>
                 </div>
-                <button type="button" onclick="requestLocation()" class="ml-2 text-xs bg-yellow-200 hover:bg-yellow-300 text-yellow-800 px-3 py-1 rounded font-bold transition-colors shadow-sm">
-                    🔄 Coba Lagi
-                </button>
+                <div class="hidden sm:block p-3 bg-white/10 rounded-xl backdrop-blur-sm">
+                    <svg class="w-8 h-8 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+                    </svg>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col justify-center items-center text-center">
+            <div id="clock" class="text-4xl font-bold text-slate-800 font-mono tracking-wider">00:00:00</div>
+            <div class="text-slate-500 text-sm font-medium mt-1">
+                {{ \Carbon\Carbon::now()->isoFormat('dddd, D MMMM Y') }}
+            </div>
+            <div id="radius-status" class="mt-4 px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-500 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-gray-400 animate-pulse"></span>
+                Mendeteksi Lokasi...
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[400px]">
+            <div class="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                <h3 class="font-semibold text-slate-700 flex items-center gap-2">
+                    <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    Lokasi Presensi
+                </h3>
+                <span class="text-xs text-slate-500 bg-white px-2 py-1 rounded border border-slate-200">
+                    Jarak: <span id="distance-val" class="font-mono font-bold text-slate-800">0</span> m
+                </span>
+            </div>
+            <div id="map" class="w-full h-full z-0 relative"></div>
+        </div>
+
+        <div class="space-y-6">
+            
+            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
+                <h3 class="font-semibold text-slate-800 mb-4">Aksi Presensi</h3>
+                
+                <div class="space-y-3">
+                    <form action="{{ route('guru.activities.store') }}" method="POST" id="form-checkin">
+                        @csrf
+                        <input type="hidden" name="type" value="checkin">
+                        <input type="hidden" name="latitude" id="lat-in">
+                        <input type="hidden" name="longitude" id="long-in">
+                        
+                        <button type="button" id="btn-checkin" disabled
+                            class="w-full group relative flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70">
+                            
+                            <div class="p-2 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
+                                </svg>
+                            </div>
+                            <span>ABSEN MASUK</span>
+                        </button>
+                    </form>
+
+                    <form action="{{ route('guru.activities.store') }}" method="POST" id="form-checkout">
+                        @csrf
+                        <input type="hidden" name="type" value="checkout">
+                        <input type="hidden" name="latitude" id="lat-out">
+                        <input type="hidden" name="longitude" id="long-out">
+
+                        <button type="button" id="btn-checkout" disabled
+                            class="w-full group relative flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70">
+                            
+                            <div class="p-2 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+                                </svg>
+                            </div>
+                            <span>ABSEN PULANG</span>
+                        </button>
+                    </form>
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-50">
+                    <p class="text-xs text-center text-slate-400">
+                        Tombol akan aktif otomatis saat Anda berada dalam radius <span class="font-bold text-slate-600">{{ $setting->radius_meter ?? 50 }} meter</span> dari lokasi sekolah.
+                    </p>
+                </div>
             </div>
 
-            <div id="debug-msg" class="hidden mb-4 p-2 text-xs text-red-600 bg-red-50 border border-red-200 rounded font-mono"></div>
-
-            @if(!$attendance)
-            <form action="{{ route('guru.attendance.in') }}" method="POST">
-                @csrf
-                <input type="hidden" name="latitude" id="lat_in">
-                <input type="hidden" name="longitude" id="long_in">
-
-                <button type="submit" id="btn-submit" disabled
-                    class="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg bg-gray-400 cursor-not-allowed transition-colors duration-200">
-                    📍 Menunggu GPS...
-                </button>
-            </form>
-            @elseif($attendance && !$attendance->clock_out)
-            <form action="{{ route('guru.attendance.out') }}" method="POST">
-                @csrf
-                <input type="hidden" name="latitude" id="lat_in">
-                <input type="hidden" name="longitude" id="long_in">
-
-                <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-4 text-center">
-                    <p class="text-blue-800 text-sm font-semibold">Anda Check In Pukul:</p>
-                    <p class="text-2xl font-bold text-blue-600">{{ $attendance->clock_in->format('H:i') }}</p>
-                </div>
-
-                <button type="submit" id="btn-submit" disabled
-                    class="w-full py-4 rounded-xl text-white font-bold text-lg shadow-lg bg-gray-400 cursor-not-allowed transition-colors duration-200">
-                    📍 Menunggu GPS...
-                </button>
-            </form>
-            @else
-            <div class="bg-green-50 border border-green-200 p-6 rounded-xl text-center">
-                <div class="flex justify-center mb-3">
-                    <div class="bg-green-100 p-3 rounded-full">
-                        <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
-                        </svg>
+            <div class="bg-indigo-50 rounded-2xl border border-indigo-100 p-5">
+                <div class="flex items-start gap-3">
+                    <svg class="w-6 h-6 text-indigo-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div>
+                        <h4 class="font-bold text-indigo-900 text-sm">Info Jam Kerja</h4>
+                        <ul class="mt-2 space-y-1 text-xs text-indigo-700">
+                            <li>• Masuk: 07:00 - 08:00 WITA</li>
+                            <li>• Pulang: 16:00 - 17:00 WITA</li>
+                            <li>• Pastikan GPS aktif di browser Anda.</li>
+                        </ul>
                     </div>
                 </div>
-                <h3 class="text-green-800 font-bold text-lg">Absensi Selesai!</h3>
-                <p class="text-green-600 text-sm mt-1">Terima kasih atas kinerja Anda hari ini.</p>
             </div>
-            @endif
+
         </div>
     </div>
-
-    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-1 flex flex-col relative">
-        <div id="map" class="w-full rounded-lg z-0" style="height: 400px; min-height: 400px;"></div>
-
-        <div class="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur-md p-3 rounded-lg shadow-lg border border-slate-200 z-10 flex justify-between items-center">
-            <div>
-                <p class="text-xs text-slate-500 uppercase font-bold">Jarak ke Sekolah</p>
-                <p class="text-lg font-bold text-slate-800" id="distance-display">-- Meter</p>
-            </div>
-            <div id="radius-indicator" class="px-3 py-1 rounded-full text-xs font-bold bg-gray-200 text-gray-500">
-                Menunggu GPS
-            </div>
-        </div>
-    </div>
-
 </div>
 
 @push('scripts')
 <script>
-    // 1. JAM DIGITAL
-    function updateClock() {
-        const now = new Date();
-        const clockElement = document.getElementById('digital-clock');
-        if (clockElement) {
-            clockElement.innerText = now.toLocaleTimeString('id-ID', {
-                hour12: false
-            });
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- 1. Digital Clock ---
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('clock').innerText = timeString;
         }
-    }
-    setInterval(updateClock, 1000);
-    updateClock();
+        setInterval(updateClock, 1000);
+        updateClock();
 
-    // 2. LOGIC PETA & GPS
-    document.addEventListener("DOMContentLoaded", function() {
-        // PERBAIKAN: Gunakan format satu baris dan casting angka yang benar
-        const schoolLat = Number("{{ $settings->school_latitude }}");
-        const schoolLng = Number("{{ $settings->school_longitude }}");
-        const radiusMeters = Number("{{ $settings->radius_meters }}");
-
-        // Validasi data koordinat agar Leaflet tidak crash
-        if (!schoolLat || !schoolLng) {
-            console.error("Koordinat sekolah tidak ditemukan di database.");
-            return;
-        }
-
-        // Inisialisasi Peta
-        var map = L.map('map').setView([schoolLat, schoolLng], 16);
+        // --- 2. Map & Geolocation ---
+        // Ambil setting dari Backend (PHP)
+        const officeLat = {{ $setting->latitude ?? -3.229683 }};
+        const officeLng = {{ $setting->longitude ?? 114.598840 }};
+        const maxRadius = {{ $setting->radius_meter ?? 160 }};
+        
+        // Inisialisasi Map
+        const map = L.map('map').setView([officeLat, officeLng], 18);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // Marker Sekolah
-        var schoolIcon = L.icon({
-            iconUrl: 'https://cdn-icons-png.flaticon.com/512/167/167707.png',
-            iconSize: [32, 32],
-            iconAnchor: [16, 32]
-        });
-        L.marker([schoolLat, schoolLng], {
-            icon: schoolIcon
-        }).addTo(map).bindPopup("Lokasi Sekolah").openPopup();
-
-        // Lingkaran Radius
-        L.circle([schoolLat, schoolLng], {
-            color: 'green',
-            fillColor: '#4ade80',
+        // Tambahkan Lingkaran Radius Sekolah
+        const circle = L.circle([officeLat, officeLng], {
+            color: '#6366f1', // Indigo 500
+            fillColor: '#818cf8', // Indigo 400
             fillOpacity: 0.2,
-            radius: radiusMeters
+            radius: maxRadius
         }).addTo(map);
 
-        var userMarker = L.marker([0, 0]).addTo(map);
+        // Marker Sekolah (Custom Icon bisa ditambahkan disini)
+        const schoolMarker = L.marker([officeLat, officeLng]).addTo(map)
+            .bindPopup("<b>GIBS School</b><br>Pusat Absensi").openPopup();
 
-        // UI Elements
-        const btnSubmit = document.getElementById('btn-submit');
-        const locStatus = document.getElementById('location-status');
-        const statusText = document.getElementById('status-text');
-        const inputLat = document.getElementById('lat_in');
-        const inputLong = document.getElementById('long_in');
-        const distanceDisplay = document.getElementById('distance-display');
-        const radiusIndicator = document.getElementById('radius-indicator');
+        // Marker User
+        let userMarker = null;
 
-        function deg2rad(deg) {
-            return deg * (Math.PI / 180);
-        }
+        // Element UI references
+        const btnCheckIn = document.getElementById('btn-checkin');
+        const btnCheckOut = document.getElementById('btn-checkout');
+        const statusBadge = document.getElementById('radius-status');
+        const distanceDisplay = document.getElementById('distance-val');
+        
+        // Form Inputs
+        const latIn = document.getElementById('lat-in');
+        const longIn = document.getElementById('long-in');
+        const latOut = document.getElementById('lat-out');
+        const longOut = document.getElementById('long-out');
 
-        function getDistanceFromLatLonInKm(lat1, lon1, lat2, lon2) {
-            var R = 6371;
-            var dLat = deg2rad(lat2 - lat1);
-            var dLon = deg2rad(lon2 - lon1);
-            var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            return (R * c) * 1000; // Meter
-        }
-
-        window.requestLocation = function() {
-            if (!navigator.geolocation) {
-                alert("Browser tidak mendukung GPS.");
-                return;
+        function updateStatus(isInside, dist) {
+            distanceDisplay.innerText = Math.round(dist);
+            
+            if(isInside) {
+                // Style UI: Inside
+                statusBadge.className = "mt-4 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-600 flex items-center gap-2 border border-emerald-200";
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Di Dalam Area`;
+                
+                // Enable Buttons (Style)
+                enableButton(btnCheckIn, 'bg-emerald-500', 'text-white', 'hover:bg-emerald-600');
+                enableButton(btnCheckOut, 'bg-rose-500', 'text-white', 'hover:bg-rose-600');
+            } else {
+                // Style UI: Outside
+                statusBadge.className = "mt-4 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-600 flex items-center gap-2 border border-rose-200";
+                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Di Luar Area`;
+                
+                // Disable Buttons
+                disableButton(btnCheckIn);
+                disableButton(btnCheckOut);
             }
+        }
 
-            locStatus.classList.remove('hidden');
-            statusText.innerText = "Meminta izin lokasi...";
+        function enableButton(btn, bgClass, textClass, hoverClass) {
+            btn.disabled = false;
+            // Hapus class disabled style
+            btn.classList.remove('bg-slate-100', 'text-slate-400');
+            // Tambah class active style
+            btn.classList.add(bgClass, textClass, hoverClass, 'shadow-lg', 'shadow-indigo-500/20');
+            
+            // Ubah tombol submit type agar bisa diklik
+            btn.type = 'submit'; 
+        }
 
-            navigator.geolocation.getCurrentPosition(
-                function(position) {
-                    const userLat = position.coords.latitude;
-                    const userLng = position.coords.longitude;
+        function disableButton(btn) {
+            btn.disabled = true;
+            btn.className = "w-full group relative flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70";
+            btn.type = 'button';
+        }
 
-                    if (inputLat) inputLat.value = userLat;
-                    if (inputLong) inputLong.value = userLng;
+        // Watch Position
+        if (navigator.geolocation) {
+            navigator.geolocation.watchPosition(
+                (position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    const accuracy = position.coords.accuracy;
 
-                    userMarker.setLatLng([userLat, userLng]);
-                    map.setView([userLat, userLng], 17);
+                    // Update Input Hidden Values
+                    if(latIn) latIn.value = lat;
+                    if(longIn) longIn.value = lng;
+                    if(latOut) latOut.value = lat;
+                    if(longOut) longOut.value = lng;
 
-                    const distance = getDistanceFromLatLonInKm(userLat, userLng, schoolLat, schoolLng);
-                    distanceDisplay.innerText = Math.round(distance) + " Meter";
-
-                    if (distance <= radiusMeters) {
-                        if (btnSubmit) {
-                            btnSubmit.disabled = false;
-                            btnSubmit.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                            btnSubmit.classList.add('bg-blue-600', 'hover:bg-blue-700');
-                            btnSubmit.innerHTML = "📍 ABSEN SEKARANG";
-                        }
-                        radiusIndicator.className = "px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700";
-                        radiusIndicator.innerText = "✅ Dalam Radius";
-                        locStatus.classList.add('hidden');
+                    // Update User Marker
+                    if (userMarker) {
+                        userMarker.setLatLng([lat, lng]);
                     } else {
-                        if (btnSubmit) {
-                            btnSubmit.disabled = true;
-                            btnSubmit.innerHTML = "❌ Terlalu Jauh (" + Math.round(distance) + "m)";
-                        }
-                        radiusIndicator.className = "px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700";
-                        radiusIndicator.innerText = "⛔ Luar Jangkauan";
-                        locStatus.classList.remove('hidden');
-                        statusText.innerText = "Anda berada di luar radius sekolah.";
+                        userMarker = L.marker([lat, lng], {
+                            icon: L.divIcon({
+                                className: 'bg-transparent',
+                                html: '<div class="w-4 h-4 bg-blue-500 rounded-full border-2 border-white shadow-lg animate-pulse"></div>'
+                            })
+                        }).addTo(map);
                     }
+
+                    // Hitung Jarak
+                    const dist = map.distance([lat, lng], [officeLat, officeLng]);
+                    const isInside = dist <= maxRadius;
+
+                    updateStatus(isInside, dist);
+                    
+                    // Auto center map ke user jika pertama kali load (opsional)
+                    // map.setView([lat, lng]); 
                 },
-                function(error) {
-                    let msg = "Gagal deteksi lokasi.";
-                    if (error.code === 1) msg = "Izin lokasi ditolak browser.";
-                    statusText.innerText = msg;
-                }, {
+                (error) => {
+                    console.error("Error Geolocation: ", error);
+                    statusBadge.innerText = "Gagal mendeteksi lokasi (Pastikan GPS Aktif)";
+                    statusBadge.classList.add('bg-red-100', 'text-red-600');
+                },
+                {
                     enableHighAccuracy: true,
-                    timeout: 10000
+                    maximumAge: 10000,
+                    timeout: 5000
                 }
             );
-        };
-
-        requestLocation();
+        } else {
+            alert("Browser Anda tidak mendukung Geolocation.");
+        }
     });
 </script>
 @endpush

@@ -38,10 +38,21 @@
 
     <div class="flex h-screen overflow-hidden">
 
+        <div x-show="sidebarOpen"
+            @click="sidebarOpen = false"
+            x-transition:enter="transition-opacity ease-linear duration-300"
+            x-transition:enter-start="opacity-0"
+            x-transition:enter-end="opacity-100"
+            x-transition:leave="transition-opacity ease-linear duration-300"
+            x-transition:leave-start="opacity-100"
+            x-transition:leave-end="opacity-0"
+            class="fixed inset-0 z-40 bg-gray-900/50 backdrop-blur-sm lg:hidden"
+            x-cloak>
+        </div>
+
         @include('layouts.sidebar')
 
         <div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
-
             <header class="sticky top-0 z-30 flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shadow-sm">
                 <div class="flex items-center gap-4">
                     <button @click="sidebarOpen = true" class="text-gray-500 focus:outline-none lg:hidden">

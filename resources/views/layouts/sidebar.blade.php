@@ -1,4 +1,7 @@
-<aside class="flex flex-col w-64 h-screen bg-slate-900 border-r border-slate-800 rtl:border-r-0 rtl:border-l relative z-40">
+<aside
+    :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
+    class="fixed inset-y-0 left-0 z-50 w-64 h-screen bg-slate-900 border-r border-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto flex flex-col"
+>
 
     @php
     $setting = \App\Models\AppSetting::first();
