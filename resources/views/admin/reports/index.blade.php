@@ -1,72 +1,85 @@
 @extends('layouts.app')
 
-@section('header', 'Rekap Laporan Kinerja Guru')
+@section('header', 'Laporan Kinerja Bulanan')
 
 @section('content')
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+<div class="bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-full">
 
-    <div class="p-6 border-b border-slate-100 bg-slate-50">
-        <form action="{{ route('admin.reports.index') }}" method="GET" class="flex flex-wrap items-center gap-4">
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Pilih Bulan</label>
-                <select name="month" class="rounded-lg border-gray-300 text-sm focus:ring-blue-500">
-                    @for($i=1; $i<=12; $i++)
-                        <option value="{{ $i }}" {{ $month == $i ? 'selected' : '' }}>
-                        {{ \Carbon\Carbon::create()->month($i)->translatedFormat('F') }}
-                        </option>
-                        @endfor
-                </select>
-            </div>
-            <button type="submit" class="mt-5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700 transition-colors">
-                Tampilkan Laporan
+    <div class="p-6 border-b border-slate-100 bg-slate-50 rounded-t-xl flex flex-col md:flex-row justify-between items-center gap-4">
+        <h3 class="font-bold text-slate-800">Rekapitulasi Kinerja Guru</h3>
+
+        <form method="GET" action="{{ route('admin.reports.index') }}" class="flex items-center gap-2">
+            <select name="month" class="rounded-lg border-slate-300 text-sm">
+                @foreach(range(1, 12) as $m)
+                <option value="{{ $m }}" {{ $m == $month ? 'selected' : '' }}>
+                    {{ \Carbon\Carbon::create()->month($m)->translatedFormat('F') }}
+                </option>
+                @endforeach
+            </select>
+            <select name="year" class="rounded-lg border-slate-300 text-sm">
+                @foreach(range(now()->year, now()->year - 2) as $y)
+                <option value="{{ $y }}" {{ $y == $year ? 'selected' : '' }}>{{ $y }}</option>
+                @endforeach
+            </select>
+            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-bold">
+                Tampilkan
             </button>
         </form>
     </div>
 
-    <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left border-collapse">
-            <thead class="bg-slate-800 text-white uppercase text-xs">
+    <div class="overflow-x-auto w-full">
+        <table class="w-full text-left text-sm text-slate-600 border-collapse">
+            <thead class="bg-slate-100 text-slate-800 uppercase font-bold border-b border-slate-300">
                 <tr>
-                    <th class="px-4 py-3 border-r border-slate-700 sticky left-0 bg-slate-800 z-10">Nama Guru</th>
-                    <th class="px-4 py-3 text-center border-r border-slate-700 bg-blue-900">K1 (Hadir)</th>
+                    <th class="p-4 border border-slate-300 sticky left-0 bg-slate-100 z-10 w-64 min-w-[200px]">
+                        Nama Guru
+                    </th>
+                    <th class="p-4 border border-slate-300 text-center min-w-[60px] bg-blue-50 text-blue-800">
+                        K1
+                    </th>
                     @foreach($activityTypes as $type)
-                    <th class="px-4 py-3 text-center border-r border-slate-700">{{ $type->code }}</th>
+                    <th class="p-4 border border-slate-300 text-center min-w-[60px]" title="{{ $type->name }}">
+                        {{ $type->code }}
+                    </th>
                     @endforeach
-                    <th class="px-4 py-3 text-center bg-green-700">Persentase</th>
+                    <th class="p-4 border border-slate-300 text-center sticky right-0 bg-slate-100 z-10">
+                        Detail
+                    </th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-slate-200">
-                @foreach($users as $user)
+                @foreach($report as $row)
                 <tr class="hover:bg-slate-50 transition-colors">
-                    <td class="px-4 py-3 font-medium text-slate-900 border-r sticky left-0 bg-white hover:bg-slate-50 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                        {{ $user->name }}
-                        <div class="text-[10px] text-slate-400 font-mono">{{ $user->nip }}</div>
+                    <td class="p-3 border border-slate-200 sticky left-0 bg-white z-10 font-medium text-slate-900">
+                        {{ $row['user']->name }}
                     </td>
 
-                    <td class="px-4 py-3 text-center border-r font-bold text-blue-600 bg-blue-50">
-                        {{ $attendances->where('user_id', $user->id)->where('status', 'ontime')->count() }}
+                    <td class="p-3 border border-slate-200 text-center font-bold text-blue-700 bg-blue-50">
+                        {{ $row['k1'] }}
                     </td>
 
-                    @php
-                    $totalTerlaksana = 0;
-                    $totalKegiatanAktif = $activityTypes->count();
-                    @endphp
                     @foreach($activityTypes as $type)
-                    @php
-                    $count = $logs->where('user_id', $user->id)->where('activity_type_id', $type->id)->count();
-                    if($count > 0) $totalTerlaksana++;
-                    @endphp
-                    <td class="px-4 py-3 text-center border-r {{ $count > 0 ? 'text-slate-800 font-bold' : 'text-slate-300' }}">
-                        {{ $count > 0 ? $count : '-' }}
+                    <td class="p-3 border border-slate-200 text-center">
+                        @php
+                        $val = $row['activities'][$type->code] ?? 0;
+                        @endphp
+
+                        @if($val > 0)
+                        <span class="font-bold text-slate-700">{{ $val }}</span>
+                        @else
+                        <span class="text-slate-300">-</span>
+                        @endif
                     </td>
                     @endforeach
 
-                    <td class="px-4 py-3 text-center font-bold bg-green-50 text-green-700">
-                        @php
-                        // Logika persentase sederhana: (Kegiatan yang pernah dilakukan / Total Jenis Kegiatan)
-                        $percent = ($totalTerlaksana / $totalKegiatanAktif) * 100;
-                        @endphp
-                        {{ number_format($percent, 0) }}%
+                    <td class="p-3 border border-slate-200 text-center sticky right-0 bg-white z-10">
+                        <a href="{{ route('admin.reports.daily', ['id' => $row['user']->id, 'month' => $month, 'year' => $year]) }}"
+                            class="bg-blue-100 hover:bg-blue-200 text-blue-700 p-2 rounded-lg inline-block">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                            </svg>
+                        </a>
                     </td>
                 </tr>
                 @endforeach
