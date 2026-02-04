@@ -1,20 +1,17 @@
 <aside
     :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-    class="fixed inset-y-0 left-0 z-50 w-64 h-screen bg-slate-900 border-r border-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto flex flex-col">
+    class="fixed inset-y-0 left-0 z-50 w-64 h-screen bg-slate-900 border-r border-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto flex flex-col"
+>
 
     @php
     $setting = \App\Models\AppSetting::first();
     $logoImage = $setting && $setting->logo_path
-    ? Storage::url($setting->logo_path)
-    : asset('build/assets/img/logo.png');
+        ? Storage::url($setting->logo_path)
+        : asset('build/assets/img/logo.png');
     @endphp
 
-    <div class="px-6 pt-8 pb-4 shrink-0">
-        <div class="flex items-center justify-center mb-8">
-            <h2 class="text-2xl font-bold tracking-tight text-white">GIBS <span class="text-slate-400 font-normal">Kinerja</span></h2>
-        </div>
-
-        <div class="flex items-center gap-4 px-2 mb-2 p-2 rounded-xl bg-slate-800/50 border border-slate-700/50">
+    <div class="px-6 mb-2">
+        <div class="flex items-center gap-4 px-3 py-3 rounded-xl bg-slate-800/50 border border-slate-700/50">
             <img class="object-cover w-10 h-10 rounded-full border border-slate-600"
                 src="{{ $logoImage }}"
                 alt="Logo Sekolah">
@@ -30,9 +27,8 @@
         </div>
     </div>
 
-    <div class="flex flex-col flex-1 px-4 overflow-y-auto mt-2">
+    <div class="flex flex-col flex-1 px-4 overflow-y-auto mt-2 custom-scrollbar">
         <nav class="space-y-1.5">
-
             @if(Auth::user()->role === 'admin')
             <p class="px-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 mt-2">Admin Menu</p>
 
@@ -140,7 +136,6 @@
                 <span class="mx-3 font-medium">Riwayat Saya</span>
             </a>
             @endif
-
         </nav>
     </div>
 

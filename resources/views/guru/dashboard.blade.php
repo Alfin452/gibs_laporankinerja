@@ -100,7 +100,7 @@
 
                 <div class="mt-4 pt-4 border-t border-slate-50">
                     <p class="text-xs text-center text-slate-400">
-                        Tombol akan aktif otomatis saat Anda berada dalam radius <span class="font-bold text-slate-600">{{ $setting->radius_meter ?? 50 }} meter</span> dari lokasi sekolah.
+                        Tombol akan aktif otomatis saat Anda berada dalam radius <span class="font-bold text-slate-600">{{ $setting->radius_meter ?? 160 }} meter</span> dari lokasi sekolah.
                     </p>
                 </div>
             </div>
@@ -111,11 +111,12 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <div>
-                        <h4 class="font-bold text-indigo-900 text-sm">Info Jam Kerja</h4>
+                        <h4 class="font-bold text-indigo-900 text-sm">Batas Check in 1 jam Sebelum Jam Masuk</h4>
+                        <h4 class="font-bold text-indigo-900 text-sm">Batas Check out 1 jam Setelah Jam Pulang</h4>
                         <ul class="mt-2 space-y-1 text-xs text-indigo-700">
-                            <li>• Masuk: 07:00 - 08:00 WITA</li>
+                            <li>• Masuk: :06:15 - 07:15 WITA</li>
                             <li>• Pulang: 16:00 - 17:00 WITA</li>
-                            <li>• Pastikan GPS aktif di browser Anda.</li>
+                            <li>• Pastikan GPS aktif di Perangkat Anda.</li>
                         </ul>
                     </div>
                 </div>
