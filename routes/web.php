@@ -5,13 +5,13 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ReportController;
-use App\Models\Attendance; 
+use App\Models\Attendance;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\ActivityTypeController;
-use App\Http\Controllers\SubstituteTargetController; 
+use App\Http\Controllers\SubstituteTargetController;
 
 
 Route::get('/', function () {
@@ -48,9 +48,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
         Route::post('/{id}/toggle', [ActivityTypeController::class, 'toggleStatus'])->name('toggle');
     });
 
+
+    Route::get('/substitutes/daily', [SubstituteTargetController::class, 'daily'])->name('substitutes.daily');
+    Route::post('/substitutes/daily', [SubstituteTargetController::class, 'storeDaily'])->name('substitutes.storeDaily');
+
     Route::get('/substitutes', [SubstituteTargetController::class, 'index'])->name('substitutes.index');
     Route::post('/substitutes', [SubstituteTargetController::class, 'store'])->name('substitutes.store');
-
 });
 
 // ROUTE KHUSUS GURU
@@ -89,4 +92,4 @@ Route::middleware(['auth', 'role:guru'])->prefix('guru')->name('guru.')->group(f
     Route::post('/attendance/out', [AttendanceController::class, 'update'])->name('attendance.out');
 });
 
-require __DIR__.'/auth.php';
+require __DIR__ . '/auth.php';
