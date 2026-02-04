@@ -61,9 +61,10 @@
                 <h3 class="font-semibold text-slate-800 mb-4">Aksi Presensi</h3>
                 
                 <div class="space-y-3">
-                    <form action="{{ route('guru.activities.store') }}" method="POST" id="form-checkin">
+                    {{-- Form Check In (Masuk) --}}
+                    {{-- PERBAIKAN: Route diarahkan ke guru.attendance.in --}}
+                    <form action="{{ route('guru.attendance.in') }}" method="POST" id="form-checkin">
                         @csrf
-                        <input type="hidden" name="type" value="checkin">
                         <input type="hidden" name="latitude" id="lat-in">
                         <input type="hidden" name="longitude" id="long-in">
                         
@@ -75,13 +76,14 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
                                 </svg>
                             </div>
-                            <span>ABSEN MASUK</span>
+                            <span id="text-checkin">ABSEN MASUK</span>
                         </button>
                     </form>
 
-                    <form action="{{ route('guru.activities.store') }}" method="POST" id="form-checkout">
+                    {{-- Form Check Out (Pulang) --}}
+                    {{-- PERBAIKAN: Route diarahkan ke guru.attendance.out --}}
+                    <form action="{{ route('guru.attendance.out') }}" method="POST" id="form-checkout">
                         @csrf
-                        <input type="hidden" name="type" value="checkout">
                         <input type="hidden" name="latitude" id="lat-out">
                         <input type="hidden" name="longitude" id="long-out">
 
@@ -93,7 +95,7 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
                                 </svg>
                             </div>
-                            <span>ABSEN PULANG</span>
+                            <span id="text-checkout">ABSEN PULANG</span>
                         </button>
                     </form>
                 </div>
@@ -114,7 +116,7 @@
                         <h4 class="font-bold text-indigo-900 text-sm">Batas Check in 1 jam Sebelum Jam Masuk</h4>
                         <h4 class="font-bold text-indigo-900 text-sm">Batas Check out 1 jam Setelah Jam Pulang</h4>
                         <ul class="mt-2 space-y-1 text-xs text-indigo-700">
-                            <li>• Masuk: :06:15 - 07:15 WITA</li>
+                            <li>• Masuk: 06:15 - 07:15 WITA</li>
                             <li>• Pulang: 16:00 - 17:00 WITA</li>
                             <li>• Pastikan GPS aktif di Perangkat Anda.</li>
                         </ul>
@@ -129,6 +131,11 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // --- STATUS ABSENSI DARI CONTROLLER ---
+        // Kita ambil data apakah user sudah absen atau belum dari variabel $attendance
+        const hasCheckIn = {{ $attendance ? 'true' : 'false' }};
+        const hasCheckOut = {{ ($attendance && $attendance->clock_out) ? 'true' : 'false' }};
+
         // --- 1. Digital Clock ---
         function updateClock() {
             const now = new Date();
@@ -139,39 +146,34 @@
         updateClock();
 
         // --- 2. Map & Geolocation ---
-        // Ambil setting dari Backend (PHP)
         const officeLat = {{ $setting->latitude ?? -3.229683 }};
         const officeLng = {{ $setting->longitude ?? 114.598840 }};
         const maxRadius = {{ $setting->radius_meter ?? 160 }};
         
-        // Inisialisasi Map
         const map = L.map('map').setView([officeLat, officeLng], 18);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap'
         }).addTo(map);
 
-        // Tambahkan Lingkaran Radius Sekolah
         const circle = L.circle([officeLat, officeLng], {
-            color: '#6366f1', // Indigo 500
-            fillColor: '#818cf8', // Indigo 400
+            color: '#6366f1',
+            fillColor: '#818cf8',
             fillOpacity: 0.2,
             radius: maxRadius
         }).addTo(map);
 
-        // Marker Sekolah (Custom Icon bisa ditambahkan disini)
         const schoolMarker = L.marker([officeLat, officeLng]).addTo(map)
             .bindPopup("<b>GIBS School</b><br>Pusat Absensi").openPopup();
 
-        // Marker User
         let userMarker = null;
 
-        // Element UI references
         const btnCheckIn = document.getElementById('btn-checkin');
         const btnCheckOut = document.getElementById('btn-checkout');
+        const textCheckIn = document.getElementById('text-checkin');
+        const textCheckOut = document.getElementById('text-checkout');
         const statusBadge = document.getElementById('radius-status');
         const distanceDisplay = document.getElementById('distance-val');
         
-        // Form Inputs
         const latIn = document.getElementById('lat-in');
         const longIn = document.getElementById('long-in');
         const latOut = document.getElementById('lat-out');
@@ -181,19 +183,46 @@
             distanceDisplay.innerText = Math.round(dist);
             
             if(isInside) {
-                // Style UI: Inside
                 statusBadge.className = "mt-4 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-600 flex items-center gap-2 border border-emerald-200";
                 statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Di Dalam Area`;
                 
-                // Enable Buttons (Style)
-                enableButton(btnCheckIn, 'bg-emerald-500', 'text-white', 'hover:bg-emerald-600');
-                enableButton(btnCheckOut, 'bg-rose-500', 'text-white', 'hover:bg-rose-600');
+                // --- LOGIKA TOMBOL DIPERBARUI DISINI ---
+                
+                // 1. Cek Tombol Check In
+                if (!hasCheckIn) {
+                    // Belum Absen Masuk -> Enable Tombol
+                    enableButton(btnCheckIn, 'bg-emerald-500', 'text-white', 'hover:bg-emerald-600');
+                    textCheckIn.innerText = "ABSEN MASUK";
+                } else {
+                    // Sudah Absen Masuk -> Disable & Ganti Teks
+                    disableButton(btnCheckIn);
+                    textCheckIn.innerText = "SUDAH MASUK";
+                    btnCheckIn.classList.add('bg-emerald-100', 'text-emerald-700'); // Style khusus sudah absen
+                    btnCheckIn.classList.remove('text-slate-400');
+                }
+
+                // 2. Cek Tombol Check Out
+                if (hasCheckIn && !hasCheckOut) {
+                    // Sudah Masuk TAPI Belum Pulang -> Enable Tombol
+                    enableButton(btnCheckOut, 'bg-rose-500', 'text-white', 'hover:bg-rose-600');
+                    textCheckOut.innerText = "ABSEN PULANG";
+                } else if (!hasCheckIn) {
+                    // Belum Masuk -> Disable Tombol Pulang
+                    disableButton(btnCheckOut);
+                    textCheckOut.innerText = "BELUM MASUK";
+                } else {
+                    // Sudah Pulang -> Disable
+                    disableButton(btnCheckOut);
+                    textCheckOut.innerText = "SUDAH PULANG";
+                    btnCheckOut.classList.add('bg-rose-100', 'text-rose-700');
+                    btnCheckOut.classList.remove('text-slate-400');
+                }
+
             } else {
-                // Style UI: Outside
                 statusBadge.className = "mt-4 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-600 flex items-center gap-2 border border-rose-200";
                 statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Di Luar Area`;
                 
-                // Disable Buttons
+                // Diluar Area -> Semua Disable
                 disableButton(btnCheckIn);
                 disableButton(btnCheckOut);
             }
@@ -201,36 +230,29 @@
 
         function enableButton(btn, bgClass, textClass, hoverClass) {
             btn.disabled = false;
-            // Hapus class disabled style
-            btn.classList.remove('bg-slate-100', 'text-slate-400');
-            // Tambah class active style
+            btn.classList.remove('bg-slate-100', 'text-slate-400', 'bg-emerald-100', 'text-emerald-700', 'bg-rose-100', 'text-rose-700'); // Reset style
             btn.classList.add(bgClass, textClass, hoverClass, 'shadow-lg', 'shadow-indigo-500/20');
-            
-            // Ubah tombol submit type agar bisa diklik
             btn.type = 'submit'; 
         }
 
         function disableButton(btn) {
             btn.disabled = true;
+            // Kita reset class dasar, tapi style spesifik (seperti 'Sudah Masuk') diatur di logika updateStatus
             btn.className = "w-full group relative flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70";
             btn.type = 'button';
         }
 
-        // Watch Position
         if (navigator.geolocation) {
             navigator.geolocation.watchPosition(
                 (position) => {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
-                    const accuracy = position.coords.accuracy;
-
-                    // Update Input Hidden Values
+                    
                     if(latIn) latIn.value = lat;
                     if(longIn) longIn.value = lng;
                     if(latOut) latOut.value = lat;
                     if(longOut) longOut.value = lng;
 
-                    // Update User Marker
                     if (userMarker) {
                         userMarker.setLatLng([lat, lng]);
                     } else {
@@ -242,14 +264,10 @@
                         }).addTo(map);
                     }
 
-                    // Hitung Jarak
                     const dist = map.distance([lat, lng], [officeLat, officeLng]);
                     const isInside = dist <= maxRadius;
 
                     updateStatus(isInside, dist);
-                    
-                    // Auto center map ke user jika pertama kali load (opsional)
-                    // map.setView([lat, lng]); 
                 },
                 (error) => {
                     console.error("Error Geolocation: ", error);
