@@ -1,7 +1,6 @@
 <aside
     :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-    class="fixed inset-y-0 left-0 z-50 w-64 h-screen bg-slate-900 border-r border-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto flex flex-col"
->
+    class="fixed inset-y-0 left-0 z-50 w-64 h-screen bg-slate-900 border-r border-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto flex flex-col">
 
     @php
     $setting = \App\Models\AppSetting::first();
@@ -63,7 +62,7 @@
                {{ request()->routeIs('admin.substitute') 
                   ? 'text-white bg-slate-800 shadow-md shadow-slate-900/10' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5' }}"
-                href="#">
+                href="{{ route('admin.substitutes.index') }}">
                 <svg class="w-5 h-5 transition-colors {{ request()->routeIs('admin.substitute') ? 'text-white' : 'text-slate-500 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>

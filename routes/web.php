@@ -10,6 +10,9 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\AdminSettingsController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\ActivityTypeController;
+use App\Http\Controllers\SubstituteTargetController; 
+
 
 Route::get('/', function () {
     return view('welcome');
@@ -39,10 +42,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // 3. Manajemen Guru (Placeholder sementara)
     Route::resource('users', AdminUserController::class);
 
-    // 4. Master Kegiatan (Placeholder sementara)
-    Route::get('/activities', function () {
-        return "Halaman Master Kegiatan";
-    })->name('activities.index');
+    Route::prefix('activities')->name('activities.')->group(function () {
+        Route::get('/', [ActivityTypeController::class, 'index'])->name('index');
+        Route::post('/store', [ActivityTypeController::class, 'store'])->name('store');
+        Route::post('/{id}/toggle', [ActivityTypeController::class, 'toggleStatus'])->name('toggle');
+    });
+
+    Route::get('/substitutes', [SubstituteTargetController::class, 'index'])->name('substitutes.index');
+    Route::post('/substitutes', [SubstituteTargetController::class, 'store'])->name('substitutes.store');
 
 });
 
