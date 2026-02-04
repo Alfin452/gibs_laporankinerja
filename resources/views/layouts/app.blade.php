@@ -9,7 +9,8 @@
     <title>{{ config('app.name', 'GIBS Performance') }}</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 
@@ -19,22 +20,18 @@
     <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-        }
-
         [x-cloak] {
             display: none !important;
         }
 
-        /* Custom SweetAlert Toast Style Overrides if needed */
         .swal2-popup.swal2-toast {
             font-size: 0.875rem !important;
         }
     </style>
 </head>
 
-<body class="font-sans antialiased bg-gray-50 text-slate-600" x-data="{ sidebarOpen: false }">
+<body class="font-sans antialiased bg-gray-50 text-slate-600"
+    x-data="{ sidebarOpen: window.innerWidth >= 1024 }">
 
     <div class="flex h-screen overflow-hidden">
 
@@ -52,16 +49,23 @@
 
         @include('layouts.sidebar')
 
-        <div class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden">
+        <div :class="sidebarOpen ? 'lg:ml-64' : 'lg:ml-0'"
+            class="relative flex flex-col flex-1 overflow-y-auto overflow-x-hidden transition-all duration-300 ease-in-out">
+
             <header class="sticky top-0 z-30 flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shadow-sm">
                 <div class="flex items-center gap-4">
-                    <button @click="sidebarOpen = true" class="text-gray-500 focus:outline-none lg:hidden">
+
+                    <button
+                        x-show="!sidebarOpen"
+                        x-cloak
+                        @click="sidebarOpen = true"
+                        class="text-gray-500 hover:text-gray-700 focus:outline-none transition-colors">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                         </svg>
                     </button>
 
-                    <h1 class="text-xl font-semibold text-slate-800">
+                    <h1 class="text-xl font-bold text-slate-800 tracking-tight">
                         @yield('header', 'Dashboard')
                     </h1>
                 </div>
@@ -99,7 +103,6 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
@@ -126,14 +129,6 @@
         Toast.fire({
             icon: 'error',
             title: "{{ session('error') }}"
-        });
-        @endif
-
-        // Optional: Notifikasi Validation Errors global
-        @if($errors -> any())
-        Toast.fire({
-            icon: 'error',
-            title: 'Terdapat kesalahan pada input data.'
         });
         @endif
     </script>
