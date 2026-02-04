@@ -1,13 +1,23 @@
 <aside
     :class="sidebarOpen ? 'translate-x-0' : '-translate-x-full'"
-    class="fixed inset-y-0 left-0 z-50 w-64 h-screen bg-slate-900 border-r border-slate-800 transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-auto flex flex-col"
->
+    class="fixed inset-y-0 left-0 z-50 w-64 h-screen bg-slate-900 border-r border-slate-800 transition-transform duration-300 ease-in-out flex flex-col shadow-2xl">
+    <div class="px-6 pt-8 pb-4 shrink-0 flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold tracking-tight text-white">GIBS <span class="text-slate-400 font-normal">Kinerja</span></h2>
+        </div>
+
+        <button @click="sidebarOpen = false" class="text-slate-400 hover:text-white transition-colors focus:outline-none p-1 rounded hover:bg-slate-800">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+        </button>
+    </div>
 
     @php
     $setting = \App\Models\AppSetting::first();
     $logoImage = $setting && $setting->logo_path
-        ? Storage::url($setting->logo_path)
-        : asset('build/assets/img/logo.png');
+    ? Storage::url($setting->logo_path)
+    : asset('build/assets/img/logo.png');
     @endphp
 
     <div class="px-6 mb-2">
@@ -58,7 +68,7 @@
                {{ request()->routeIs('admin.substitute') 
                   ? 'text-white bg-slate-800 shadow-md shadow-slate-900/10' 
                   : 'text-slate-400 hover:text-white hover:bg-white/5' }}"
-                href="{{ route('admin.substitutes.index') }}">
+                href="#">
                 <svg class="w-5 h-5 transition-colors {{ request()->routeIs('admin.substitute') ? 'text-white' : 'text-slate-500 group-hover:text-white' }}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
                 </svg>
