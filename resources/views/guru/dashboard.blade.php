@@ -5,6 +5,7 @@
 @section('content')
 <div class="max-w-7xl mx-auto space-y-6">
 
+    {{-- 1. HEADER: Welcome & Jam --}}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="md:col-span-2 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
             <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white/10 rounded-full blur-xl"></div>
@@ -45,8 +46,10 @@
         </div>
     </div>
 
+    {{-- 2. CONTENT: Map & Buttons --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         
+        {{-- MAP --}}
         <div class="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden flex flex-col h-[400px]">
             <div class="p-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
                 <h3 class="font-semibold text-slate-700 flex items-center gap-2">
@@ -63,49 +66,80 @@
             <div id="map" class="w-full h-full z-0 relative"></div>
         </div>
 
+        {{-- BUTTONS ACTION --}}
         <div class="space-y-6">
             
             <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
                 <h3 class="font-semibold text-slate-800 mb-4">Aksi Presensi</h3>
                 
-                <div class="space-y-3">
-                    {{-- Form Check In --}}
-                    {{-- PERBAIKAN: Menggunakan route attendance.in --}}
-                    <form action="{{ route('guru.attendance.in') }}" method="POST" id="form-checkin">
-                        @csrf
-                        <input type="hidden" name="latitude" id="lat-in">
-                        <input type="hidden" name="longitude" id="long-in">
-                        
-                        <button type="button" id="btn-checkin" disabled
-                            class="w-full group relative flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70">
+                <div class="space-y-4">
+                    
+                    {{-- 1. TOMBOL MASUK --}}
+                    @if(empty($attendance))
+                        {{-- BELUM MASUK --}}
+                        <form action="{{ route('guru.attendance.in') }}" method="POST" id="form-checkin">
+                            @csrf
+                            <input type="hidden" name="latitude" id="lat-in">
+                            <input type="hidden" name="longitude" id="long-in">
                             
-                            <div class="p-2 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1"></path>
-                                </svg>
+                            <button type="button" id="btn-checkin" disabled
+                                class="w-full flex items-center justify-center px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70 shadow-sm border border-transparent">
+                                {{-- PERBAIKAN: Tambah SPAN id text-checkin --}}
+                                <span id="text-checkin">ABSEN MASUK</span>
+                            </button>
+                        </form>
+                    @else
+                        {{-- SUDAH MASUK (CARD STATUS) --}}
+                        <div class="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-emerald-50 border border-emerald-100 relative overflow-hidden group">
+                            <div class="absolute right-0 top-0 -mt-2 -mr-2 w-16 h-16 bg-emerald-100 rounded-full blur-xl opacity-50"></div>
+                            <div class="flex-shrink-0 w-10 h-10 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
                             </div>
-                            <span id="text-checkin">ABSEN MASUK</span>
-                        </button>
-                    </form>
-
-                    {{-- Form Check Out --}}
-                    {{-- PERBAIKAN: Menggunakan route attendance.out --}}
-                    <form action="{{ route('guru.attendance.out') }}" method="POST" id="form-checkout">
-                        @csrf
-                        <input type="hidden" name="latitude" id="lat-out">
-                        <input type="hidden" name="longitude" id="long-out">
-
-                        <button type="button" id="btn-checkout" disabled
-                            class="w-full group relative flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70">
-                            
-                            <div class="p-2 bg-white rounded-lg shadow-sm group-hover:scale-110 transition-transform">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-                                </svg>
+                            <div>
+                                <h4 class="font-bold text-emerald-700 text-sm uppercase tracking-wide">Sudah Check-In</h4>
+                                <p class="text-emerald-600 text-xs mt-0.5 font-mono">
+                                    Pukul {{ \Carbon\Carbon::parse($attendance->time_in)->format('H:i') }} WITA
+                                </p>
                             </div>
-                            <span id="text-checkout">ABSEN PULANG</span>
+                        </div>
+                    @endif
+
+                    {{-- 2. TOMBOL PULANG --}}
+                    @if(empty($attendance))
+                        {{-- Belum Masuk -> Tombol Pulang Mati Total --}}
+                        <button disabled class="w-full flex items-center justify-center px-6 py-4 rounded-xl bg-slate-50 text-slate-300 font-bold border border-slate-100 cursor-not-allowed">
+                            ABSEN PULANG
                         </button>
-                    </form>
+
+                    @elseif(empty($attendance->time_out))
+                        {{-- Sudah Masuk -> Tombol Pulang Ada (Tapi Dicek Jam) --}}
+                        <form action="{{ route('guru.attendance.out') }}" method="POST" id="form-checkout">
+                            @csrf
+                            <input type="hidden" name="latitude" id="lat-out">
+                            <input type="hidden" name="longitude" id="long-out">
+
+                            <button type="button" id="btn-checkout" disabled
+                                class="w-full flex items-center justify-center px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70 shadow-sm border border-transparent">
+                                {{-- PERBAIKAN: Tambah SPAN id text-checkout --}}
+                                <span id="text-checkout">ABSEN PULANG</span>
+                            </button>
+                        </form>
+
+                    @else
+                        {{-- SUDAH PULANG (CARD STATUS) --}}
+                        <div class="w-full flex items-center gap-4 px-5 py-4 rounded-xl bg-indigo-50 border border-indigo-100 relative overflow-hidden group">
+                            <div class="absolute right-0 top-0 -mt-2 -mr-2 w-16 h-16 bg-indigo-100 rounded-full blur-xl opacity-50"></div>
+                            <div class="flex-shrink-0 w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-indigo-700 text-sm uppercase tracking-wide">Sudah Check-Out</h4>
+                                <p class="text-indigo-600 text-xs mt-0.5 font-mono">
+                                    Pukul {{ \Carbon\Carbon::parse($attendance->time_out)->format('H:i') }} WITA
+                                </p>
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 <div class="mt-4 pt-4 border-t border-slate-50">
@@ -115,16 +149,18 @@
                 </div>
             </div>
 
-            <div class="bg-indigo-50 rounded-2xl border border-indigo-100 p-5">
+            {{-- INFO BOX --}}
+            <div class="bg-blue-50 rounded-2xl border border-blue-100 p-5">
                 <div class="flex items-start gap-3">
-                    <svg class="w-6 h-6 text-indigo-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg class="w-6 h-6 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
                     </svg>
                     <div>
-                        <h4 class="font-bold text-indigo-900 text-sm">Informasi Jam Presensi</h4>
-                        <ul class="mt-2 space-y-1 text-xs text-indigo-700">
-                            <li>• Batas Tepat Waktu: <b>06:15 WITA- 07:15 WITA</b></li>
-                            <li>• Absen Pulang: <b>16:00 WITA - 17:00 WITA</b></li>
+                        <h4 class="font-bold text-blue-900 text-sm">Info Jam Kerja</h4>
+                        <ul class="mt-2 space-y-1 text-xs text-blue-700">
+                            <li>• Masuk: 07:00 - 08:00 WITA</li>
+                            <li>• Pulang: 16:00 - 17:00 WITA</li>
+                            <li>• Tombol Pulang aktif otomatis pukul 16:00.</li>
                         </ul>
                     </div>
                 </div>
@@ -137,22 +173,22 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', () => {
+        // Status PHP ke JS
         const hasCheckIn = {{ $attendance ? 'true' : 'false' }};
         const hasCheckOut = {{ ($attendance && $attendance->clock_out) ? 'true' : 'false' }};
         
-        // Variabel global untuk jam saat ini (diambil dari jam HP)
         let currentHour = new Date().getHours(); 
 
         function updateClock() {
             const now = new Date();
-            currentHour = now.getHours(); // Update jam setiap detik
+            currentHour = now.getHours(); 
             const timeString = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             document.getElementById('clock').innerText = timeString;
         }
         setInterval(updateClock, 1000);
         updateClock();
 
-        // ... (Kode Map & Geolocation sama seperti sebelumnya) ...
+        // Konfigurasi Peta
         const officeLat = {{ $setting->latitude ?? -3.229683 }};
         const officeLng = {{ $setting->longitude ?? 114.598840 }};
         const maxRadius = {{ $setting->radius_meter ?? 160 }};
@@ -164,6 +200,7 @@
         
         let userMarker = null;
 
+        // Element Referensi
         const btnCheckIn = document.getElementById('btn-checkin');
         const btnCheckOut = document.getElementById('btn-checkout');
         const textCheckIn = document.getElementById('text-checkin');
@@ -177,71 +214,68 @@
         const longOut = document.getElementById('long-out');
 
         function updateStatus(isInside, dist) {
-            distanceDisplay.innerText = Math.round(dist);
+            if (distanceDisplay) distanceDisplay.innerText = Math.round(dist);
             
             if(isInside) {
-                statusBadge.className = "mt-4 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-600 flex items-center gap-2 border border-emerald-200";
-                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Di Dalam Area`;
+                if(statusBadge) {
+                    statusBadge.className = "mt-4 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-600 flex items-center gap-2 border border-emerald-200";
+                    statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Di Dalam Area`;
+                }
                 
-                // --- LOGIKA TOMBOL & JAM ---
+                // --- LOGIKA TOMBOL ---
                 
-                // 1. Check In
+                // 1. LOGIKA TOMBOL MASUK
                 if (!hasCheckIn) {
-                    enableButton(btnCheckIn, 'bg-emerald-500', 'text-white', 'hover:bg-emerald-600');
-                    textCheckIn.innerText = "ABSEN MASUK";
-                } else {
-                    disableButton(btnCheckIn);
-                    textCheckIn.innerText = "SUDAH MASUK";
-                    btnCheckIn.classList.add('bg-emerald-100', 'text-emerald-700'); 
-                    btnCheckIn.classList.remove('text-slate-400');
+                    // Jika belum masuk -> Aktifkan Tombol
+                    if(btnCheckIn) {
+                        enableButton(btnCheckIn, 'bg-emerald-500', 'text-white', 'hover:bg-emerald-600');
+                        if(textCheckIn) textCheckIn.innerText = "ABSEN MASUK";
+                    }
                 }
 
-                // 2. Check Out (Dengan Validasi Jam 16:00)
+                // 2. LOGIKA TOMBOL PULANG (Validasi Jam 16:00)
                 if (hasCheckIn && !hasCheckOut) {
-                    
                     if (currentHour >= 16) { 
-                        // Jika sudah jam 16:00 ke atas -> Buka Tombol
-                        enableButton(btnCheckOut, 'bg-rose-500', 'text-white', 'hover:bg-rose-600');
-                        textCheckOut.innerText = "ABSEN PULANG";
+                        // JAM >= 16:00 -> Boleh Pulang
+                        if(btnCheckOut) {
+                            enableButton(btnCheckOut, 'bg-rose-500', 'text-white', 'hover:bg-rose-600');
+                            if(textCheckOut) textCheckOut.innerText = "ABSEN PULANG";
+                        }
                     } else {
-                        // Jika belum jam 16:00 -> Kunci Tombol & Beri Info
-                        disableButton(btnCheckOut);
-                        textCheckOut.innerText = "BELUM JAM PULANG (16:00)";
-                        // Tambah style kuning/warning biar user sadar
-                        btnCheckOut.classList.add('bg-amber-100', 'text-amber-700');
-                        btnCheckOut.classList.remove('text-slate-400');
+                        // JAM < 16:00 -> Tahan Tombol
+                        if(btnCheckOut) {
+                            disableButton(btnCheckOut);
+                            // Beri visual warning (Kuning)
+                            btnCheckOut.classList.add('bg-amber-100', 'text-amber-700');
+                            btnCheckOut.classList.remove('text-slate-400');
+                            if(textCheckOut) textCheckOut.innerText = "BELUM JAM PULANG (16:00)";
+                        }
                     }
-
-                } else if (!hasCheckIn) {
-                    disableButton(btnCheckOut);
-                    textCheckOut.innerText = "BELUM MASUK";
-                } else {
-                    disableButton(btnCheckOut);
-                    textCheckOut.innerText = "SUDAH PULANG";
-                    btnCheckOut.classList.add('bg-rose-100', 'text-rose-700');
-                    btnCheckOut.classList.remove('text-slate-400');
                 }
 
             } else {
-                statusBadge.className = "mt-4 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-600 flex items-center gap-2 border border-rose-200";
-                statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Di Luar Area`;
+                // Di Luar Radius
+                if(statusBadge) {
+                    statusBadge.className = "mt-4 px-3 py-1 rounded-full text-xs font-bold bg-rose-100 text-rose-600 flex items-center gap-2 border border-rose-200";
+                    statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500"></span> Di Luar Area`;
+                }
                 
-                disableButton(btnCheckIn);
-                disableButton(btnCheckOut);
+                if(btnCheckIn) disableButton(btnCheckIn);
+                if(btnCheckOut) disableButton(btnCheckOut);
             }
         }
 
-        // ... (Sisa fungsi helper enableButton, disableButton, navigator.geolocation sama) ...
-        function enableButton(btn, bgClass, textClass, hoverClass) {
+        function enableButton(btn, ...classes) {
             btn.disabled = false;
-            btn.classList.remove('bg-slate-100', 'text-slate-400', 'bg-emerald-100', 'text-emerald-700', 'bg-rose-100', 'text-rose-700', 'bg-amber-100', 'text-amber-700'); 
-            btn.classList.add(bgClass, textClass, hoverClass, 'shadow-lg', 'shadow-indigo-500/20');
+            // Reset base classes yang mungkin konflik
+            btn.className = "w-full flex items-center justify-center px-6 py-4 rounded-xl font-bold transition-all duration-300";
+            btn.classList.add(...classes, 'shadow-lg');
             btn.type = 'submit'; 
         }
 
         function disableButton(btn) {
             btn.disabled = true;
-            btn.className = "w-full group relative flex items-center justify-center gap-3 px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70";
+            btn.className = "w-full flex items-center justify-center px-6 py-4 rounded-xl bg-slate-100 text-slate-400 font-bold transition-all duration-300 disabled:cursor-not-allowed disabled:opacity-70 shadow-sm border border-transparent";
             btn.type = 'button';
         }
 
@@ -274,7 +308,7 @@
                 },
                 (error) => {
                     console.error("Error Geolocation: ", error);
-                    statusBadge.innerText = "Gagal mendeteksi lokasi";
+                    if(statusBadge) statusBadge.innerText = "Gagal mendeteksi lokasi";
                 },
                 { enableHighAccuracy: true }
             );
